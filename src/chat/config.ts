@@ -1,5 +1,6 @@
 export const CHAT_CONFIG = {
-  apiKey: 'zbnfu8kchyby',
+   apiKey: 'YOUR_STREAM_API_KEY_HERE',
+  
   tokenEndpoint: '',
   useDevToken: true,
   defaultUserId: '',

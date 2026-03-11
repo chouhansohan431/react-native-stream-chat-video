@@ -1,14 +1,17 @@
-import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View } from 'react-native'
+import React, { useCallback, useEffect, useState } from 'react'
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
 import { NavigationContainer } from '@react-navigation/native'
 import { StreamChat } from 'stream-chat'
 import { Chat, OverlayProvider } from 'stream-chat-react-native'
 import { StreamVideo, StreamVideoClient } from '@stream-io/video-react-native-sdk'
 import AppNavigator from '../navigation/AppNavigator'
 import AuthScreen from '../screens/chat/AuthScreen'
+import SplashScreen from '../screens/chat/SplashScreen'
 import { CHAT_CONFIG, isChatConfigured } from './config'
 import { createTokenProvider } from './createTokenProvider'
 import { ChatSession } from './types'
+import { saveSession, loadSession, clearSession } from './sessionStorage'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 const getInitialSession = (): ChatSession | null => {
   const hasDefaultIdentity =
@@ -45,9 +48,54 @@ function MissingConfigScreen() {
 
 export default function ChatBootstrap() {
   const [session, setSession] = useState<ChatSession | null>(getInitialSession)
+  const [isLoadingSession, setIsLoadingSession] = useState(true)
+  const [showSplash, setShowSplash] = useState(true)
+
+  // Load persisted session from AsyncStorage on mount
+  useEffect(() => {
+    loadSession().then(stored => {
+      if (stored) {
+        setSession(stored)
+      }
+      setIsLoadingSession(false)
+    })
+  }, [])
+
+  // Show splash screen for 3-4 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false)
+    }, 3500) // 3.5 seconds
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  const handleSignIn = useCallback((newSession: ChatSession) => {
+    setSession(newSession)
+    saveSession(newSession)
+  }, [])
+
+  const handleLogout = useCallback(() => {
+    clearSession()
+    setSession(null)
+  }, [])
 
   if (!isChatConfigured()) {
     return <MissingConfigScreen />
+  }
+
+  if (showSplash) {
+    return <SplashScreen onFinish={() => setShowSplash(false)} />
+  }
+
+  if (isLoadingSession) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" />
+        </View>
+      </SafeAreaView>
+    )
   }
 
   if (!session) {
@@ -55,12 +103,12 @@ export default function ChatBootstrap() {
       <AuthScreen
         allowDevToken={CHAT_CONFIG.useDevToken}
         hasTokenEndpoint={Boolean(CHAT_CONFIG.tokenEndpoint.trim())}
-        onSignIn={setSession}
+        onSignIn={handleSignIn}
       />
     )
   }
 
-  return <ConnectedChatApp onLogout={() => setSession(null)} session={session} />
+  return <ConnectedChatApp onLogout={handleLogout} session={session} />
 }
 
 type ConnectedChatAppProps = {
@@ -114,10 +162,10 @@ function ConnectedChatApp({ onLogout, session }: ConnectedChatAppProps) {
         }
         const tokenProvider = CHAT_CONFIG.tokenEndpoint.trim()
           ? createTokenProvider(
-              CHAT_CONFIG.tokenEndpoint,
-              session.userId,
-              session.userName,
-            )
+            CHAT_CONFIG.tokenEndpoint,
+            session.userId,
+            session.userName,
+          )
           : undefined
         const nextVideoClient = new StreamVideoClient({
           apiKey: CHAT_CONFIG.apiKey,
@@ -146,8 +194,8 @@ function ConnectedChatApp({ onLogout, session }: ConnectedChatAppProps) {
 
     return () => {
       mounted = false
-      connectedChatClient?.disconnectUser().catch(() => {})
-      connectedVideoClient?.disconnectUser().catch(() => {})
+      connectedChatClient?.disconnectUser().catch(() => { })
+      connectedVideoClient?.disconnectUser().catch(() => { })
     }
   }, [session.userId, session.userName, session.userImage, session.userToken])
 

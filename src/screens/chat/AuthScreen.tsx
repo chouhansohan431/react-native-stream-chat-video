@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,6 +8,7 @@ import {
   View,
 } from 'react-native'
 import { ChatSession } from '../../chat/types'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 type Props = {
   hasTokenEndpoint: boolean

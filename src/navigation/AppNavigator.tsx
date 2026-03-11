@@ -1,12 +1,18 @@
 import React from 'react'
-import { Pressable, StyleSheet, Text } from 'react-native'
+import { StyleSheet } from 'react-native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
+
 import ChannelListScreen from '../screens/chat/ChannelListScreen'
 import ChannelScreen from '../screens/chat/ChannelScreen'
 import UsersListScreen from '../screens/chat/UsersListScreen'
 import ProfileScreen from '../screens/chat/ProfileScreen'
 import VideoCallScreen from '../screens/chat/VideoCallScreen'
+import CreateGroupScreen from '../screens/chat/CreateGroupScreen'
+import Ionicons from 'react-native-vector-icons/Ionicons'
+import ChatTabIcon from '../components/ChatTabIcon'
+import { colors } from '../theme'
+ 
 
 export type RootStackParamList = {
   MainTabs: undefined
@@ -22,6 +28,7 @@ export type RootStackParamList = {
     title?: string
     audioOnly?: boolean
   }
+  CreateGroup: undefined
 }
 
 type MainTabParamList = {
@@ -37,36 +44,55 @@ type Props = {
 const Stack = createNativeStackNavigator<RootStackParamList>()
 const Tab = createBottomTabNavigator<MainTabParamList>()
 
-type LogoutButtonProps = {
-  onPress: () => void
-}
-
-function LogoutButton({ onPress }: LogoutButtonProps) {
-  return (
-    <Pressable onPress={onPress}>
-      <Text style={styles.logoutText}>Log out</Text>
-    </Pressable>
-  )
-}
-
 function MainTabs({ onLogout }: Props) {
   return (
     <Tab.Navigator
-      screenOptions={{
+      screenOptions={({ route }) => ({
         headerStyle: {
-          backgroundColor: '#0b5ed7',
+          backgroundColor: colors.primary,
         },
-        headerTintColor: '#ffffff',
+        headerTintColor: colors.white,
         headerTitleStyle: {
           fontWeight: '700',
         },
-        // eslint-disable-next-line react/no-unstable-nested-components
-        headerRight: () => <LogoutButton onPress={onLogout} />,
-      }}
+
+        tabBarIcon: ({ focused, color, size }) => {
+          if (route.name === "Chats") {
+            return <ChatTabIcon color={color} size={size} />
+          }
+
+          let iconName = ""
+
+          if (route.name === "Users") {
+            iconName = focused ? "people" : "people-outline"
+          } else if (route.name === "Profile") {
+            iconName = focused ? "person" : "person-outline"
+          }
+
+          return <Ionicons name={iconName} size={size} color={color} />
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: 'gray',
+      })}
     >
-      <Tab.Screen name="Users" component={UsersListScreen} />
-      <Tab.Screen name="Chats" component={ChannelListScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen
+        name="Users"
+        component={UsersListScreen}
+        options={{ title: 'Users', headerShown: false }}
+      />
+
+      <Tab.Screen
+        name="Chats"
+        component={ChannelListScreen}
+        options={{ title: "Chats" }}
+      />
+
+      <Tab.Screen
+        name="Profile"
+        options={{ title: 'Profile' }}
+      >
+        {() => <ProfileScreen onLogout={onLogout} />}
+      </Tab.Screen>
     </Tab.Navigator>
   )
 }
@@ -76,9 +102,9 @@ export default function AppNavigator({ onLogout }: Props) {
     <Stack.Navigator
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#0b5ed7',
+          backgroundColor: colors.primary,
         },
-        headerTintColor: '#ffffff',
+        headerTintColor: colors.white,
         headerTitleStyle: {
           fontWeight: '700',
         },
@@ -86,12 +112,11 @@ export default function AppNavigator({ onLogout }: Props) {
     >
       <Stack.Screen
         name="MainTabs"
-        options={{
-          headerShown: false,
-        }}
+        options={{ headerShown: false }}
       >
         {() => <MainTabs onLogout={onLogout} />}
       </Stack.Screen>
+
       <Stack.Screen
         name="Channel"
         component={ChannelScreen}
@@ -99,6 +124,13 @@ export default function AppNavigator({ onLogout }: Props) {
           title: route.params.title ?? 'Chat',
         })}
       />
+
+      <Stack.Screen
+        name="CreateGroup"
+        component={CreateGroupScreen}
+        options={{ title: 'New group' }}
+      />
+
       <Stack.Screen
         name="VideoCall"
         component={VideoCallScreen}
@@ -112,9 +144,5 @@ export default function AppNavigator({ onLogout }: Props) {
   )
 }
 
-const styles = StyleSheet.create({
-  logoutText: {
-    color: '#ffffff',
-    fontWeight: '700',
-  },
-})
+
+
